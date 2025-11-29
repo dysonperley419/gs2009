@@ -7,6 +7,7 @@ import parseurl from 'parseurl';
 import qs from 'qs';
 import googleapis from 'googleapis';
 import Encoding from 'encoding-japanese';
+import autocomplete from './extern_js/pull_autocomplete.js'
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -326,6 +327,29 @@ app.get('/images/yellow_warning.gif', (req, res) => {
       res.type('gif');
       res.send(data);
     });
+})
+
+app.get('/extern_js/f/autocomplete.js', (req, res) => {
+    fs.readFile('./extern_js/autocomplete.js', (err, data) => {
+      res.send(data);
+    });
+})
+
+app.get('/complete/search', async (req, res) => {
+    let result = "";
+    let hl = "";
+
+    if (req.query.hl == "" || req.query.hl == undefined) {
+        hl = serverlanguage;
+    } else {
+        hl = req.query.hl;
+    }
+
+    result = await autocomplete.pull("a", "ja")
+    console.log("eaea")
+    res.status(200)
+    res.set('Content-Type','application/javascript')
+    res.send(result)
 })
 
 app.get('/images/logo_sm.gif', (req, res) => {
