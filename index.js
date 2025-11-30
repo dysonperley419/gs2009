@@ -28,6 +28,7 @@ var yt2009address = "";
 var only_old = false;
 var only_old_date = "2010-03-20";
 var serverlanguage = "en";
+var searchqueryEnabled = true;
 
 function reloadconfig(){
     console.log("[INFO] Reloading config...")
@@ -40,6 +41,7 @@ function reloadconfig(){
     only_old = false;
     only_old_date = "2010-03-20";
     serverlanguage = "en";
+    searchqueryEnabled = true;
     
     try {
         fs.readFileSync('config.json')
@@ -61,7 +63,9 @@ function reloadconfig(){
             YT2009_ADDRESS: "",
 
             ONLY_OLD: false,
-            ONLY_OLD_DATE: only_old_date
+            ONLY_OLD_DATE: only_old_date,
+
+            SEARCH_QUERY: true
         }
         console.log(JsonTemp)
         fs.writeFileSync('config.json', JSON.stringify(JsonTemp));
@@ -100,6 +104,8 @@ function reloadconfig(){
     console.log("[CONFIG] serverlanguage <= " + config.LANGUAGE)
     port = config.PORT
     console.log("[CONFIG] port <= " + config.PORT)
+    searchqueryEnabled = config.SEARCH_QUERY
+    console.log("[CONFIG] searchqueryEnabled <= " + config.SEARCH_QUERY)
 
     if (gs_api == "") {
         console.log("[WARN] Custom Search API (API_KEY) is not set correctly! PLease see /gs2009settings")
@@ -262,7 +268,9 @@ app.get('/setprefs', (req, res) => {
         YT2009_ADDRESS: req.query.yt2009addr,
 
         ONLY_OLD: onlyold_temp,
-        ONLY_OLD_DATE: req.query.onlyolddate
+        ONLY_OLD_DATE: req.query.onlyolddate,
+
+        SEARCH_QUERY: req.query.enablesq
     }
 
     console.log(JsonTemp)
@@ -355,7 +363,12 @@ app.get('/complete/search', async (req, res) => {
         res.set('Content-Type','text/javascript')
     }
     res.status(200)
-    res.send(result)
+    if (searchqueryEnabled == true) {
+        res.send(result)
+    } else {
+        res.send()
+        return
+    }
 })
 
 app.get('/images/logo_sm.gif', (req, res) => {
@@ -591,6 +604,10 @@ app.get('/gs2009settings', (req, res) => {
 
         if (only_old == true) {
             repl = repl.replace(/d value=1/, "d value=1 checked")
+        }
+
+        if (searchqueryEnabled == true) {
+            repl = repl.replace(/enablesq value=1/, "enablesq value=1 checked")
         }
 
         repl = repl.replace("onlyolddate-replace-this", only_old_date)
