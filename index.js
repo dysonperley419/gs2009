@@ -331,7 +331,7 @@ app.get('/images/yellow_warning.gif', (req, res) => {
 
 app.get('/extern_js/f/autocomplete.js', (req, res) => {
     fs.readFile('./extern_js/autocomplete.js', (err, data) => {
-      res.send(data);
+        res.send(data);
     });
 })
 
@@ -339,16 +339,22 @@ app.get('/complete/search', async (req, res) => {
     let result = "";
     let hl = "";
 
+    console.log(req.query)
+    console.log(req.originalUrl)
     if (req.query.hl == "" || req.query.hl == undefined) {
         hl = serverlanguage;
     } else {
         hl = req.query.hl;
     }
 
-    result = await autocomplete.pull("a", "ja")
-    console.log("eaea")
+    result = await autocomplete.pull(req.query.q, hl, req.query.expIds, req.query.cp)
+    if (serverlanguage == "ja") {
+        result = iconv.encode(result.toString(), 'shift_jis')
+        res.set('Content-Type','text/javascript; charset=Shift_JIS')
+    } else {
+        res.set('Content-Type','text/javascript')
+    }
     res.status(200)
-    res.set('Content-Type','application/javascript')
     res.send(result)
 })
 
@@ -357,6 +363,11 @@ app.get('/images/logo_sm.gif', (req, res) => {
       res.type('gif');
       res.send(data);
     });
+})
+
+app.get('/generate_204'), ((req, res) => {
+    res.status(204);
+    res.send("");
 })
 
 app.get('/accounts/msh.gif', (req, res) => {
