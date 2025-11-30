@@ -432,7 +432,7 @@
 		g && Ia(g);
 		Ja();
 		// ga = ["http", fa ? "s" : "", "://"].join("");
-        ga = ["http://"].join("");
+        // ga = ["http://"].join("");
 		(new Image).src = ga + "/generate_204";
 	}
 
@@ -831,7 +831,7 @@
 	function $a(a, b, c, d) {
 		S && oa.removeChild(S);
 		S = document.createElement("script");
-		S.src = [ga, "192.168.40.106", a, "&", b, "=", encodeURIComponent(c),
+		S.src = [a, "&", b, "=", encodeURIComponent(c),
 			"&cp=" + O
 		].join("");
 		oa.appendChild(S);
