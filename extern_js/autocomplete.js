@@ -767,7 +767,7 @@
 		a.onmousedown = Xa;
 		a = a.insertCell(0);
 		a.innerHTML =
-			'<div class=gac_bt><input class=gac_sb type=button value="Google Search" onclick="google.ac.rd(0)"><input class=gac_sb type=button value="I&#39;m Feeling Lucky" onclick="google.ac.rd(1)"></div>'
+			'<div class=gac_bt><input class=gac_sb type=button value="str_search" onclick="google.ac.rd(0)"><input class=gac_sb type=button value="str_imfl" onclick="google.ac.rd(1)"></div>'
 	}
 
 	function fb(a) {

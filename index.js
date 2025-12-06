@@ -339,7 +339,32 @@ app.get('/images/yellow_warning.gif', (req, res) => {
 
 app.get('/extern_js/f/autocomplete.js', (req, res) => {
     fs.readFile('./extern_js/autocomplete.js', (err, data) => {
-        res.send(data);
+        let repl = data.toString();
+
+        const filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
+        fs.readFile(filePath, (err, data) => {
+            let conv;
+
+            if (serverlanguage == "ja") {
+                conv = iconv.decode(data, 'shift_jis')
+            } else {
+                conv = data.toString();
+            }
+
+            let str_search = conv.substring(conv.indexOf('name=btnG') + 29)
+            str_search = str_search.substring(0, str_search.indexOf('"'));
+            let str_imfl = conv.substring(conv.indexOf('name=btnI') + 29)
+            str_imfl = str_imfl.substring(0, str_imfl.indexOf('"'));
+            console.log(str_search);
+            console.log(str_imfl);
+
+            repl = repl.replace("str_search", str_search)
+            repl = repl.replace("str_imfl", str_imfl)
+
+            res.send(repl)
+        })
+
+        
     });
 })
 
