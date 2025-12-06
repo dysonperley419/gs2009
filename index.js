@@ -8,16 +8,13 @@ import qs from 'qs';
 import googleapis from 'googleapis';
 import Encoding from 'encoding-japanese';
 import autocomplete from './extern_js/pull_autocomplete.js'
-import { stdin as input, stdout as output } from "node:process";
-import * as readline from "node:readline";
+import * as readline from 'readline-sync'
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 const pjson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 const gs2009_version = pjson.version
-
-const rl = readline.createInterface({ input, output });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,14 +49,10 @@ function genconfig(){
         console.log("[INFO] ID : https://programmablesearchengine.google.com/controlpanel/create")
         console.log("[INFO] ===============================================")
         console.log("[INFO]")
-        rl.question("[JSON] Custom Search API key: ", (key) => {
-            gs_api = key;
-            rl.close();
-        })
-        rl.question("[JSON] Programmable Search Engine ID: ", (id) => {
-            gs_engineID = id;
-            rl.close();
-        })
+        let key = readline.question("[JSON] Custom Search API key: ");
+        gs_api = key;
+        let id = readline.question("[JSON] Programmable Search Engine ID: ");
+        gs_engineID = id;
         const JsonTemp = {
             PORT: "3000",
 
@@ -79,7 +72,6 @@ function genconfig(){
 
             SEARCH_QUERY: true
         }
-        console.log(JsonTemp)
         fs.writeFileSync('config.json', JSON.stringify(JsonTemp));
         console.log("[INFO] Generated config.json to " + __dirname + "/config.json")
     }
