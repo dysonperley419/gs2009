@@ -311,8 +311,69 @@ app.get('/setprefs', (req, res) => {
 })
 
 app.get('/intl/ja_jp/images/logo.gif', (req, res) => {
-    fs.readFile('./assets/images/ja_jp/logo.gif', (err, data) => {
+    let now = new Date
+    let nowmonth = now.getMonth() + 1
+    let tmp = now.getDay()
+    let nowday 
+    if (tmp < 10) {
+        nowday = 0 + tmp.toString()
+    } else {
+        nowday = tmp
+    }
+    let nowdate = nowmonth.toString() + nowday.toString()
+    
+    let logo_path = './assets/images/ja_jp/logo.gif';
+    
+    
+    if (nowdate == "0209") {
+        logo_path = './assets/logos/soseki10-hp.gif'
+    }
+    fs.readFile(logo_path, (err, data) => {
       res.type('gif');
+      res.send(data);
+    });
+})
+
+app.get('/logos/olympics10.png', (req, res) => {
+    let now = new Date
+    let nowmonth = now.getMonth() + 1
+    let tmp = now.getDay()
+    let nowday 
+    if (tmp < 10) {
+        nowday = 0 + tmp.toString()
+    } else {
+        nowday = tmp
+    }
+    let nowdate = nowmonth.toString() + nowday.toString()
+    
+    let logo_path = './assets/images/ja_jp/logo.gif';
+
+    if (nowdate == "0213") {
+        if (serverlanguage == "ja") {
+            logo_path = './assets/logos/olympics10-opening-nr-hp.png'
+        } else {
+            logo_path = './assets/logos/olympics10-opening-hp.png'
+        }
+    } else if (nowdate == "0214" || nowdate == "0215") {
+        logo_path = './assets/logos/olympics10-snowboarding-hp.png'
+    } else if (nowdate == "0216") {
+        logo_path = './assets/logos/olympics10-xcskiing-hp.png'
+    } else if (nowdate == "0217") {
+        logo_path = './assets/logos/olympics10-curling-hp.png'
+    } else if (nowdate == "0218") {
+        logo_path = './assets/logos/olympics10-xcskiiing2-hp.png'
+    } else if (nowdate == "0219" || nowdate == "0220") {
+        logo_path = './assets/logos/olympics10-apskiing-hp.png'
+    } else if (nowdate == "0221") {
+        logo_path = './assets/logos/olympics10-skijump-hp.png'
+    } else if (nowdate == "0222") {
+        logo_path = './assets/logos/olympics10-bobsleigh-hp.png'
+    } else if (nowdate == "0223") {
+        logo_path = './assets/logos/olympics10-icedance-hp.png'
+    }
+
+    fs.readFile(logo_path, (err, data) => {
+      res.type('png');
       res.send(data);
     });
 })
@@ -326,6 +387,13 @@ app.get('/intl/en_ALL/images/logo.gif', (req, res) => {
 
 app.get('/images/nav_logo3.png', (req, res) => {
     fs.readFile('./assets/images/nav_logo3.png', (err, data) => {
+      res.type('png');
+      res.send(data);
+    });
+})
+
+app.get('/logos/olympics10-bg.jpg', (req, res) => {
+    fs.readFile('./assets/logos/olympics10-bg.jpg', (err, data) => {
       res.type('png');
       res.send(data);
     });
@@ -512,6 +580,7 @@ app.get('/webhp', (req, res) => {
             repl = repl.replace("gbar_user_REPLACE_HERE", ext_t_g_u_l)
         }
         
+        repl = repl.replace(/message/g, "")
         repl = repl.replace(/gbar_username/g, SimLogin)
         if (serverlanguage == "ja"){
             let encoded = iconv.encode(repl, 'shift_jis')
@@ -590,7 +659,23 @@ app.get('/imghp', (req, res) => {
 app.get('/', (req, res) => {
     console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     let SimLogin = req.cookies.SimLogin;
-    const filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
+
+    let now = new Date
+    let nowmonth = now.getMonth() + 1
+    let tmp = now.getDay()
+
+    let filePath
+
+    if (nowmonth == 2){
+        if (tmp >= 12) {
+            if (tmp <= 23) {
+                filePath = path.join(__dirname, "/html/" + serverlanguage + "/index-olympics10.html");
+            }
+        }
+    } else {
+        filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
+    }
+        
     fs.readFile(filePath, (err, data) => {
         let repl = "";
         
@@ -605,7 +690,30 @@ app.get('/', (req, res) => {
         } else {
             repl = repl.replace("gbar_user_REPLACE_HERE", ext_t_g_u_l)
         }
+
+        let messagelist = JSON.parse(fs.readFileSync('./assets/messages/' + serverlanguage + '.json', 'utf8'))
+
+        let now = new Date
+        let nowmonth = now.getMonth() + 1
+        let tmp = now.getDay()
+        let nowday 
+        if (tmp < 10) {
+            nowday = 0 + tmp.toString()
+        } else {
+            nowday = tmp
+        }
+        let nowdate = nowmonth.toString() + nowday.toString()
+        let message;
+
+        messagelist.messages.forEach(item => {
+            if (nowdate.toString() == item.date) {
+                message = item.message
+            }
+        })
+        repl = repl.replace(/message/g, message)
+        repl = repl.replace(/message/g, "")
         
+        repl = repl.replace(/undefined/g, "")
         repl = repl.replace(/gbar_username/g, SimLogin)
         if (serverlanguage == "ja"){
             let encoded = iconv.encode(repl, 'shift_jis')
