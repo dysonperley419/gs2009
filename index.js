@@ -8,12 +8,16 @@ import qs from 'qs';
 import googleapis from 'googleapis';
 import Encoding from 'encoding-japanese';
 import autocomplete from './extern_js/pull_autocomplete.js'
+import { stdin as input, stdout as output } from "node:process";
+import * as readline from "node:readline";
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 const pjson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
 const gs2009_version = pjson.version
+
+const rl = readline.createInterface({ input, output });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,24 +34,32 @@ var only_old_date = "2010-03-20";
 var serverlanguage = "en";
 var searchqueryEnabled = true;
 
-function reloadconfig(){
-    console.log("[INFO] Reloading config...")
-    gs_api = "";
-    gs_engineID = "";
-    toHTTP = false;
-    redirector_only = "none";
+function genconfig(){
     waybackdate = "20100324182056";
-    yt2009address = "";
-    only_old = false;
     only_old_date = "2010-03-20";
-    serverlanguage = "en";
-    searchqueryEnabled = true;
     
     try {
         fs.readFileSync('config.json')
+        console.log("[INFO] config.json already exists")
     } catch(e) {
-        console.error("[ERROR] config.json not found")
-        console.log("[ERROR] regenerating...")
+        console.log("[INFO] generating config")
+        console.log("[INFO]")
+        console.log("[INFO] ===============================================")
+        console.log("[INFO] You will need to get Custom Search API key and Programmable Search Engine ID.")
+        console.log("[INFO] These input fields can be filled empty for now, but you can't search without them for right now.")
+        console.log("[INFO] Key/ID can be obtained from:")
+        console.log("[INFO] API: https://developers.google.com/custom-search/v1/overview")
+        console.log("[INFO] ID : https://programmablesearchengine.google.com/controlpanel/create")
+        console.log("[INFO] ===============================================")
+        console.log("[INFO]")
+        rl.question("[JSON] Custom Search API key: ", (key) => {
+            gs_api = key;
+            rl.close();
+        })
+        rl.question("[JSON] Programmable Search Engine ID: ", (id) => {
+            gs_engineID = id;
+            rl.close();
+        })
         const JsonTemp = {
             PORT: "3000",
 
@@ -70,6 +82,26 @@ function reloadconfig(){
         console.log(JsonTemp)
         fs.writeFileSync('config.json', JSON.stringify(JsonTemp));
         console.log("[INFO] Generated config.json to " + __dirname + "/config.json")
+    }
+}
+
+function reloadconfig(){
+    console.log("[INFO] Reloading config...")
+    gs_api = "";
+    gs_engineID = "";
+    toHTTP = false;
+    redirector_only = "none";
+    waybackdate = "20100324182056";
+    yt2009address = "";
+    only_old = false;
+    only_old_date = "2010-03-20";
+    serverlanguage = "en";
+    searchqueryEnabled = true;
+    
+    try {
+        fs.readFileSync('config.json')
+    } catch(e) {
+        genconfig()
     }
 
     const configTemp = fs.readFileSync('config.json');
@@ -116,6 +148,11 @@ function reloadconfig(){
 }
 
 reloadconfig()
+
+if (process.argv[2] == "--gen-config") {
+    console.log("[INFO] done")
+    process.exit(0)
+}
 
 const {google} = googleapis;
 const customSearch = google.customsearch("v1");
