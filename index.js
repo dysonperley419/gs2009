@@ -667,10 +667,10 @@ app.get('/', (req, res) => {
     let filePath
 
     if (nowmonth == 2){
-        if (tmp >= 12) {
-            if (tmp <= 23) {
-                filePath = path.join(__dirname, "/html/" + serverlanguage + "/index-olympics10.html");
-            }
+        if (tmp >= 12 && tmp <= 23) {
+            filePath = path.join(__dirname, "/html/" + serverlanguage + "/index-olympics10.html");
+        } else {
+            filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
         }
     } else {
         filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
