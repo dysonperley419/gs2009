@@ -1,11 +1,15 @@
-async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
+export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
     let page;
     let url;
     let url1;
     if (searchIP == undefined) {
         throw new Error("searchIP is empty, cannot proceed")
     } else {
-        if (searchIP.match(/http:\/\//) != false && searchIP.match(/https:\/\//) != false) {
+        if (searchIP.match(/http:\/\//) == false && searchIP.match(/https:\/\//) == false) {
             if (typeof isHTTPS == "boolean") {
                 if (isHTTPS) {
                     url1 = "https://" + searchIP
@@ -31,20 +35,24 @@ async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
     }
 
     url = url1 + "/?q=" + query + "&format=json" + "&pageno=" + page + "&engines=google"
+    /*
     if (lr != undefined) {
         url = url + "&language=" + lr
     }
+        */
 
     try {
         const result = await fetch(url)
         const json = await result.json();
+        console.log(json)
         if (result.ok == false) {
+            console.log(url)
             throw new Error("omg look at the status code you did it wrong: " + result.status)
         } else {
             console.log(result.status)
         }
 
-        const results = { data: { searx: true, items: [] } }
+        const results = { data: { searchInformation: { formattedTotalResults: 0 }, items: [] } }
 
         json.results.forEach(result => {
             if (result.template != "default.html") return;
@@ -69,11 +77,12 @@ async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
             results.data.items.push(returns)
         })
 
+        const rand = new Intl.NumberFormat("en-US", {}).format(getRandomInt(2147483647))
+        results.data.searchInformation.formattedTotalResults = rand
+
         return results;
     }
     catch(e) {
         console.error(e)
     }
 }
-
-export default { searxngfetch }

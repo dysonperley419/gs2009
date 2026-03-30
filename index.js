@@ -265,7 +265,13 @@ async function search(event) {
     let result;
 
     if (searchengine == "searxng") {
-        result = searxngfetch(searxng_url, searxng_ishttps, query, lr, start)
+        let temp_searxng_ishttps
+        if (searxng_url.match(/https:\/\//) || searxng_url.match(/http:\/\//)) {
+            temp_searxng_ishttps = searxng_ishttps
+            searxng_ishttps = undefined
+        }
+        result = await searxngfetch(searxng_url, searxng_ishttps, query, lr, start)
+        searxng_ishttps = temp_searxng_ishttps
     } else {
         result = await customSearch.cse.list({
 
@@ -330,6 +336,10 @@ app.get('/setprefs', (req, res) => {
         PORT: port,
 
         LANGUAGE: req.query.hl,
+
+        ENGINE: req.query.engine,
+        SEARXNG_URL: req.query.searxng_url,
+        SEARXNG_ISHTTPS: req.query.searxng_ishttps,
 
         API_KEY: req.query.apikey,
         CSE_ID: req.query.cseid,
@@ -777,6 +787,18 @@ app.get('/gs2009settings', (req, res) => {
     fs.readFile(filePath, (err, data) => {
         let repl;
         repl = data.toString();
+
+        if (searchengine = "cse") {
+            repl = repl.replace(/cse"/, "cse\" checked")
+        } else {
+            repl = repl.replace(/searxng"/, "searxng\" checked")
+        }
+
+        if (searxng_url == undefined) {
+            repl = repl.replace("searxng_url-replace-this", "")
+        } else {
+            repl = repl.replace("searxng_url-replace-this", searxng_url)
+        }
         repl = repl.replace("api-key-replace-this", gs_api)
         repl = repl.replace("cse-id-replace-this", gs_engineID)
         repl = repl.replace("value=" + serverlanguage, "value=" + serverlanguage + " selected")
@@ -883,7 +905,7 @@ app.get('/search', async (req, res) => {
     const startTime = Date.now();
     let nowTime = 0;
     var sqparam = qs.parse(parseurl(req).query);
-    if (sqparam.q == "") {
+    if (sqparam.q == "" || sqparam.q == undefined) {
         console.log("[INFO] search: query was empty, redirecting to /")
         res.redirect('/');
         return
@@ -930,23 +952,35 @@ app.get('/search', async (req, res) => {
     try {
         result = await search();
     } catch(e) {
-        console.error("[ERROR] GaxiosError:", e.cause.status);
-        console.error("[ERROR]", e.cause.message);
-        if (e.cause.status != "RESOURCE_EXHAUSTED") {
+        if (searchengine == "cse") {
+            console.error("[ERROR] GaxiosError:", e.cause.status);
+            console.error("[ERROR]", e.cause.message);
+            if (e.cause.status != "RESOURCE_EXHAUSTED") {
+                const filePath = path.join(__dirname, "/html/error.html");
+                fs.readFile(filePath, (err, data) => {
+                    let repl = data.toString();
+                    repl = repl.replace(/status/, e.cause.status)
+                    repl = repl.replace(/message/, e.cause.message)
+                    res.send(repl)
+                })
+            } else {
+                const filePath = path.join(__dirname, "/html/quota.html");
+                fs.readFile(filePath, (err, data) => {
+                    data = data.toString();
+                    res.send(data)
+                })
+            }
+        } else {
+            console.error("[ERROR]", e)
             const filePath = path.join(__dirname, "/html/error.html");
             fs.readFile(filePath, (err, data) => {
                 let repl = data.toString();
-                repl = repl.replace(/status/, e.cause.status)
-                repl = repl.replace(/message/, e.cause.message)
+                repl = repl.replace(/status/, "")
+                repl = repl.replace(/message/, e)
                 res.send(repl)
             })
-        } else {
-            const filePath = path.join(__dirname, "/html/quota.html");
-            fs.readFile(filePath, (err, data) => {
-                data = data.toString();
-                res.send(data)
-            })
         }
+        
         return
     }
 
