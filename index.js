@@ -9,6 +9,7 @@ import googleapis from 'googleapis';
 import Encoding from 'encoding-japanese';
 import autocomplete from './extern_js/pull_autocomplete.js'
 import * as readline from 'readline-sync'
+import searxngfetch from './backend/searx-api-hit.js'
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -20,8 +21,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 var port = 3000;
+var searchengine = "cse";
+
+var searxng_url = "";
+var searxng_ishttps = false;
+
 var gs_api = "";
 var gs_engineID = "";
+
 var toHTTP = false;
 var redirector_only = "none";
 var waybackdate = "20100324182056";
@@ -42,21 +49,40 @@ function genconfig(){
         console.log("[INFO] generating config")
         console.log("[INFO]")
         console.log("[INFO] ===============================================")
-        console.log("[INFO] You will need to get Custom Search API key and Programmable Search Engine ID.")
-        console.log("[INFO] These input fields can be filled empty for now, but you can't search without them for right now.")
+        console.log("[INFO] Configure your instance via /gs2009settings or config.json!")
+        console.log("[INFO]")
+        console.log("[INFO] Before running your gs2009 instance, You'll need the")
+        console.log("[INFO] either SearXNG instance or Custom Search JSON API!")
+        console.log("[INFO]")
+        console.log("[INFO] If you wish to use the SearXNG instance, You need to configure")
+        console.log("[INFO] your instance to be able to use json format via Search API.")
+        console.log("[INFO]")
+        console.log("[INFO] If you wish to use the Custom Search JSON API, You need the")
+        console.log("[INFO] API key that is already generated before Google restricts")
+        console.log("[INFO] the generating API key.")
+        console.log("[INFO] Since Google deprecated Custom Search JSON API, You can't")
+        console.log("[INFO] use the new API key for this project, which will cause")
+        console.log("[INFO] ACCESS_DENIED error when searching.")
+        console.log("[INFO]")
         console.log("[INFO] Key/ID can be obtained from:")
         console.log("[INFO] API: https://developers.google.com/custom-search/v1/overview")
         console.log("[INFO] ID : https://programmablesearchengine.google.com/controlpanel/create")
         console.log("[INFO] ===============================================")
         console.log("[INFO]")
+        /*
         let key = readline.question("[JSON] Custom Search API key: ");
         gs_api = key;
         let id = readline.question("[JSON] Programmable Search Engine ID: ");
         gs_engineID = id;
+        */
         const JsonTemp = {
             PORT: "3000",
 
             LANGUAGE: "en",
+
+            ENGINE: "cse",
+            SEARXNG_URL: "",
+            SEARXNG_ISHTTPS: false,
 
             API_KEY: "",
             CSE_ID: "",
@@ -79,6 +105,11 @@ function genconfig(){
 
 function reloadconfig(){
     console.log("[INFO] Reloading config...")
+
+    searchengine = "cse";
+    searxng_url = "";
+    searxng_ishttps = false;
+
     gs_api = "";
     gs_engineID = "";
     toHTTP = false;
@@ -99,6 +130,14 @@ function reloadconfig(){
     const configTemp = fs.readFileSync('config.json');
 
     const config = JSON.parse(configTemp.toString())
+
+    searchengine = config.ENGINE
+    console.log("[CONFIG] searchengine <= " + config.ENGINE)
+
+    searxng_url = config.SEARXNG_URL
+    console.log("[CONFIG] searxng_url <= " + config.SEARXNG_URL)
+    searxng_ishttps = config.SEARXNG_ISHTTPS
+    console.log("[CONFIG] searxng_ishttps <= " + config.SEARXNG_ISHTTPS)
 
     gs_api = config.API_KEY
     if (gs_api == "") {
@@ -131,11 +170,13 @@ function reloadconfig(){
     searchqueryEnabled = config.SEARCH_QUERY
     console.log("[CONFIG] searchqueryEnabled <= " + config.SEARCH_QUERY)
 
-    if (gs_api == "") {
-        console.log("[WARN] Custom Search API (API_KEY) is not set correctly! PLease see /gs2009settings")
-    }
-    if (gs_engineID == "") {
-        console.log("[WARN] Search Engine ID (CSE_ID) is not set correctly! PLease see /gs2009settings")
+    if (searchengine =="cse") {
+        if (gs_api == "") {
+            console.log("[WARN] Custom Search API (API_KEY) is not set correctly! PLease see /gs2009settings")
+        }
+        if (gs_engineID == "") {
+            console.log("[WARN] Search Engine ID (CSE_ID) is not set correctly! PLease see /gs2009settings")
+        }
     }
 }
 
@@ -223,20 +264,32 @@ async function search(event) {
 
     console.log(start)
 
-    let result = await customSearch.cse.list({
+    let result;
 
-        auth: gs_api,
+    if (searchengine == "searxng") {
+        let temp_searxng_ishttps
+        if (searxng_url.match(/https:\/\//) || searxng_url.match(/http:\/\//)) {
+            temp_searxng_ishttps = searxng_ishttps
+            searxng_ishttps = undefined
+        }
+        result = await searxngfetch(searxng_url, searxng_ishttps, query, lr, start)
+        searxng_ishttps = temp_searxng_ishttps
+    } else {
+        result = await customSearch.cse.list({
 
-        cx: gs_engineID,
+            auth: gs_api,
 
-        q: query,
+            cx: gs_engineID,
 
-        hl: hl,
+            q: query,
 
-        lr: lr,
+            hl: hl,
 
-        start: start
-    });
+            lr: lr,
+
+            start: start
+        });
+    }
 
     return(result);
 }
@@ -255,11 +308,10 @@ app.listen(port, () => {
 });
 
 app.get('/setprefs', (req, res) => {
-    console.log("a")
     if (req.query.yt2009addr == "yt2009addr-replace-this") {
         return
     }
-    console.log(req.query)
+    // console.log(req.query)
     let redir_temp
     let redirhttp_temp
     let onlyold_temp
@@ -286,6 +338,10 @@ app.get('/setprefs', (req, res) => {
         PORT: port,
 
         LANGUAGE: req.query.hl,
+
+        ENGINE: req.query.engine,
+        SEARXNG_URL: req.query.searxng_url,
+        SEARXNG_ISHTTPS: req.query.searxng_ishttps,
 
         API_KEY: req.query.apikey,
         CSE_ID: req.query.cseid,
@@ -452,8 +508,8 @@ app.get('/extern_js/f/autocomplete.js', (req, res) => {
             str_search = str_search.substring(0, str_search.indexOf('"'));
             let str_imfl = conv.substring(conv.indexOf('name=btnI') + 29)
             str_imfl = str_imfl.substring(0, str_imfl.indexOf('"'));
-            console.log(str_search);
-            console.log(str_imfl);
+            // console.log(str_search);
+            // console.log(str_imfl);
 
             repl = repl.replace("str_search", str_search)
             repl = repl.replace("str_imfl", str_imfl)
@@ -469,8 +525,8 @@ app.get('/complete/search', async (req, res) => {
     let result = "";
     let hl = "";
 
-    console.log(req.query)
-    console.log(req.originalUrl)
+    // console.log(req.query)
+    // console.log(req.originalUrl)
     if (req.query.hl == "" || req.query.hl == undefined) {
         hl = serverlanguage;
     } else {
@@ -562,7 +618,7 @@ app.get('/favicon.ico', (req, res) => {
 })
 
 app.get('/webhp', (req, res) => {
-    console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
+    // console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     let SimLogin = req.cookies.SimLogin;
     const filePath = path.join(__dirname, "/html/" + serverlanguage + "/index.html");
     fs.readFile(filePath, (err, data) => {
@@ -595,7 +651,7 @@ app.get('/webhp', (req, res) => {
 });
 
 app.get('/search_csstest', (req, res) => {
-    console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
+    // console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     let SimLogin = req.cookies.SimLogin;
     const filePath = path.join(__dirname, "/html/" + serverlanguage + "/search.html");
     fs.readFile(filePath, (err, data) => {
@@ -627,7 +683,7 @@ app.get('/search_csstest', (req, res) => {
 });
 
 app.get('/imghp', (req, res) => {
-    console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
+    // console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     if (req.cookies.SimLogin === undefined) {
         const filePath = path.join(__dirname, "/html/" + serverlanguage + "/images/index.html");
             fs.readFile(filePath, (err, data) => {
@@ -657,7 +713,7 @@ app.get('/imghp', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
+    // console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     let SimLogin = req.cookies.SimLogin;
 
     let now = new Date
@@ -733,6 +789,18 @@ app.get('/gs2009settings', (req, res) => {
     fs.readFile(filePath, (err, data) => {
         let repl;
         repl = data.toString();
+
+        if (searchengine = "cse") {
+            repl = repl.replace(/cse"/, "cse\" checked")
+        } else {
+            repl = repl.replace(/searxng"/, "searxng\" checked")
+        }
+
+        if (searxng_url == undefined) {
+            repl = repl.replace("searxng_url-replace-this", "")
+        } else {
+            repl = repl.replace("searxng_url-replace-this", searxng_url)
+        }
         repl = repl.replace("api-key-replace-this", gs_api)
         repl = repl.replace("cse-id-replace-this", gs_engineID)
         repl = repl.replace("value=" + serverlanguage, "value=" + serverlanguage + " selected")
@@ -810,7 +878,7 @@ app.get('/firefox', (req, res) => {
 })
 
 app.post('/accounts/LoginAuth', (req, res) => {
-    console.log(req.body);
+    // console.log(req.body);
     var SimLogin = req.body.Email;
     /*
     if (SimLogin = "undefined") {
@@ -839,7 +907,7 @@ app.get('/search', async (req, res) => {
     const startTime = Date.now();
     let nowTime = 0;
     var sqparam = qs.parse(parseurl(req).query);
-    if (sqparam.q == "") {
+    if (sqparam.q == "" || sqparam.q == undefined) {
         console.log("[INFO] search: query was empty, redirecting to /")
         res.redirect('/');
         return
@@ -886,23 +954,35 @@ app.get('/search', async (req, res) => {
     try {
         result = await search();
     } catch(e) {
-        console.error("[ERROR] GaxiosError:", e.cause.status);
-        console.error("[ERROR]", e.cause.message);
-        if (e.cause.status != "RESOURCE_EXHAUSTED") {
+        if (searchengine == "cse") {
+            console.error("[ERROR] GaxiosError:", e.cause.status);
+            console.error("[ERROR]", e.cause.message);
+            if (e.cause.status != "RESOURCE_EXHAUSTED") {
+                const filePath = path.join(__dirname, "/html/error.html");
+                fs.readFile(filePath, (err, data) => {
+                    let repl = data.toString();
+                    repl = repl.replace(/status/, e.cause.status)
+                    repl = repl.replace(/message/, e.cause.message)
+                    res.send(repl)
+                })
+            } else {
+                const filePath = path.join(__dirname, "/html/quota.html");
+                fs.readFile(filePath, (err, data) => {
+                    data = data.toString();
+                    res.send(data)
+                })
+            }
+        } else {
+            console.error("[ERROR]", e)
             const filePath = path.join(__dirname, "/html/error.html");
             fs.readFile(filePath, (err, data) => {
                 let repl = data.toString();
-                repl = repl.replace(/status/, e.cause.status)
-                repl = repl.replace(/message/, e.cause.message)
+                repl = repl.replace(/status/, "")
+                repl = repl.replace(/message/, e)
                 res.send(repl)
             })
-        } else {
-            const filePath = path.join(__dirname, "/html/quota.html");
-            fs.readFile(filePath, (err, data) => {
-                data = data.toString();
-                res.send(data)
-            })
         }
+        
         return
     }
 
@@ -929,39 +1009,27 @@ app.get('/search', async (req, res) => {
     console.log("[INFO] search: Sorting item")
     link.forEach((item, i) => {
         
-        console.log("link:" + link[i])
+        // console.log("link:" + link[i])
         let alp = alphlist[i];
-        console.log("link alp:" + alp)
+        // console.log("link alp:" + alp)
         result.data.items.forEach((item, o) => {
-            console.log("checking url:", item.displayLink)
-            if (linklist[i] == 0){
-                console.log("no")
-                return
-            }
-            if (o == i) {
-                console.log("no")
-                return
-            }
-            if (typeof linklist[i] !== 'number') {
-                console.log("no")
+            // console.log("checking url:", item.displayLink)
+            if (linklist[i] == 0 || o == i || typeof linklist[i] !== 'number'){
+                // console.log("no")
                 return
             }
             if (link[i] == item.displayLink){
-                if (i <= o) {
-                    console.log("matched???? nah")
+                if (i <= o || isNaN(linklist[i])) {
+                    // console.log("matched???? nah")
                     return
                 }
-                if (isNaN(linklist[i])){
-                    console.log("nah")
-                    return
-                }
-                console.log("matched!")
+                // console.log("matched!")
                 linklist[i] = o + alp
                 return
             }
-            console.log("checked:" + o)
+            // console.log("checked:" + o)
         })
-        console.log("checked url:" + i)
+        // console.log("checked url:" + i)
     })
 
     const linkalplist = [...linklist].sort();
@@ -1253,8 +1321,10 @@ app.get('/search', async (req, res) => {
         repl = repl.replace(/topItem/g, "")
         console.log("[INFO] search: Sending replaced result")
         
+        /*
         console.log("result: ", result);
         console.log()
+        */
         if (serverlanguage == "ja"){
             let encoded = iconv.encode(repl, 'shift_jis')
             res.set("Content-Type", "text/html;charset=Shift_JIS")
