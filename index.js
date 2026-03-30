@@ -170,11 +170,13 @@ function reloadconfig(){
     searchqueryEnabled = config.SEARCH_QUERY
     console.log("[CONFIG] searchqueryEnabled <= " + config.SEARCH_QUERY)
 
-    if (gs_api == "") {
-        console.log("[WARN] Custom Search API (API_KEY) is not set correctly! PLease see /gs2009settings")
-    }
-    if (gs_engineID == "") {
-        console.log("[WARN] Search Engine ID (CSE_ID) is not set correctly! PLease see /gs2009settings")
+    if (searchengine =="cse") {
+        if (gs_api == "") {
+            console.log("[WARN] Custom Search API (API_KEY) is not set correctly! PLease see /gs2009settings")
+        }
+        if (gs_engineID == "") {
+            console.log("[WARN] Search Engine ID (CSE_ID) is not set correctly! PLease see /gs2009settings")
+        }
     }
 }
 
