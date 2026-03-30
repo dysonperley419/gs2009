@@ -22,7 +22,6 @@ async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
         }
     }
     if (query == undefined || query == "") {
-        console.log("hi")
         return
     }
     if (start != undefined) {
