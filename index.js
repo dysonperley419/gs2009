@@ -25,6 +25,8 @@ var searchengine = "cse";
 
 var searxng_url = "";
 var searxng_ishttps = false;
+var searxng_eg = false;
+console.log(searxng_eg)
 
 var gs_api = "";
 var gs_engineID = "";
@@ -83,6 +85,7 @@ function genconfig(){
             ENGINE: "cse",
             SEARXNG_URL: "",
             SEARXNG_ISHTTPS: false,
+            SEARXNG_USEOTHERENGINE: false,
 
             API_KEY: "",
             CSE_ID: "",
@@ -103,12 +106,17 @@ function genconfig(){
     }
 }
 
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
 function reloadconfig(){
     console.log("[INFO] Reloading config...")
 
     searchengine = "cse";
     searxng_url = "";
     searxng_ishttps = false;
+    searxng_eg = false;
 
     gs_api = "";
     gs_engineID = "";
@@ -138,6 +146,8 @@ function reloadconfig(){
     console.log("[CONFIG] searxng_url <= " + config.SEARXNG_URL)
     searxng_ishttps = config.SEARXNG_ISHTTPS
     console.log("[CONFIG] searxng_ishttps <= " + config.SEARXNG_ISHTTPS)
+    searxng_eg = config.SEARXNG_USEOTHERENGINE
+    console.log("[CONFIG] searxng_eg <= " + config.SEARXNG_USEOTHERENGINE)
 
     gs_api = config.API_KEY
     if (gs_api == "") {
@@ -272,7 +282,7 @@ async function search(event) {
             temp_searxng_ishttps = searxng_ishttps
             searxng_ishttps = undefined
         }
-        result = await searxngfetch(searxng_url, searxng_ishttps, query, lr, start)
+            result = await searxngfetch(searxng_url, searxng_ishttps, searxng_eg, query, lr, start)
         searxng_ishttps = temp_searxng_ishttps
     } else {
         result = await customSearch.cse.list({
@@ -311,15 +321,23 @@ app.get('/setprefs', (req, res) => {
     if (req.query.yt2009addr == "yt2009addr-replace-this") {
         return
     }
-    // console.log(req.query)
+    
+    console.log(req.query)
     let redir_temp
     let redirhttp_temp
     let onlyold_temp
+    let searxng_eg_temp
 
     if (req.query.redir == "on") {
         redir_temp = "both"
     } else {
         redir_temp = req.query.redir
+    }
+
+    if (req.query.searxng_eg != "1") {
+        searxng_eg_temp = false
+    } else {
+        searxng_eg_temp = true
     }
 
     if (req.query.redirhttp != '1') {
@@ -342,6 +360,7 @@ app.get('/setprefs', (req, res) => {
         ENGINE: req.query.engine,
         SEARXNG_URL: req.query.searxng_url,
         SEARXNG_ISHTTPS: req.query.searxng_ishttps,
+        SEARXNG_USEOTHERENGINE: searxng_eg_temp,
 
         API_KEY: req.query.apikey,
         CSE_ID: req.query.cseid,
@@ -650,6 +669,18 @@ app.get('/webhp', (req, res) => {
     return
 });
 
+app.get('/notepad', (req, res) => {
+    const filePath = path.join(__dirname, "/html/eggs/notepad.html");
+    fs.readFile(filePath, (err, data) => {
+        let repl = data.toString();
+        const wordlist = ["evilest", "evil", "cool", "wowie", "googlest", "coolest", "greatest", "pre", "applest", "everest", "more cooler", "very", ""]
+
+        repl = repl.replace(/okest/, wordlist[getRandomInt(wordlist.length)])
+        res.send(repl)
+    } )
+    return
+});
+
 app.get('/search_csstest', (req, res) => {
     // console.log("[INFO] Simulated login username: " + req.cookies.SimLogin);
     let SimLogin = req.cookies.SimLogin;
@@ -790,7 +821,7 @@ app.get('/gs2009settings', (req, res) => {
         let repl;
         repl = data.toString();
 
-        if (searchengine = "cse") {
+        if (searchengine == "cse") {
             repl = repl.replace(/cse"/, "cse\" checked")
         } else {
             repl = repl.replace(/searxng"/, "searxng\" checked")
@@ -801,6 +832,11 @@ app.get('/gs2009settings', (req, res) => {
         } else {
             repl = repl.replace("searxng_url-replace-this", searxng_url)
         }
+
+        if (searxng_eg == true) {
+            repl = repl.replace(/searxng_eg value=1/, "searxng_eg value=1 checked")
+        }
+
         repl = repl.replace("api-key-replace-this", gs_api)
         repl = repl.replace("cse-id-replace-this", gs_engineID)
         repl = repl.replace("value=" + serverlanguage, "value=" + serverlanguage + " selected")
@@ -987,10 +1023,27 @@ app.get('/search', async (req, res) => {
     }
 
     console.log("[INFO] search: got an result")
+    
     // console.log("result: ", result);
     // console.log(JSON.stringify(result.data.items, null, 2))
     // console.log("-----------------------------------------------");
     const link = [];
+    let filePath = "";
+
+    try {
+        let test_result_length = result.data.items.length
+    } catch {
+        console.log("[INFO] search: nvm thats error")
+        const filePath = path.join(__dirname, "/html/error.html");
+        fs.readFile(filePath, (err, data) => {
+            let repl = data.toString();
+            repl = repl.replace(/status/, result.data.error.title)
+            repl = repl.replace(/message/, result.data.error.desc)
+            res.send(repl)
+        })
+        return
+    }
+
     result.data.items.forEach(item => {
         // console.log("-----------------------------")
         // console.log(item.htmlTitle, item.displayLink, item.link, item.htmlSnippet, item.htmlFormattedUrl)
@@ -1046,7 +1099,6 @@ app.get('/search', async (req, res) => {
     console.log("[INFO] search: Sorted Number list:")
     console.log(linknumlist);
 
-    let filePath = "";
     filePath = path.join(__dirname, "/html/" + serverlanguage + "/search.html");
     
     fs.readFile(filePath, (err, data) => {
@@ -1097,7 +1149,6 @@ app.get('/search', async (req, res) => {
 
         repl = items.join("item")
 
-        
         result.data.items.forEach((item, i) => {
             if (typeof linkalplist[i] !== 'number') {
                 repl = repl.replace(/item/, ext_t_s_m)
@@ -1177,13 +1228,21 @@ app.get('/search', async (req, res) => {
             search.htmlFormattedUrl = "";
             search.displayLink = "";
 
-            if (i != linknumlist[i]){
-                search.htmlTitle = result.data.items[linknumlist[i]].htmlTitle;
-                search.link = result.data.items[linknumlist[i]].link;
-                search.htmlFormattedUrl = result.data.items[linknumlist[i]].htmlFormattedUrl;
-                search.htmlSnippet = result.data.items[linknumlist[i]].htmlSnippet;
-                search.displayLink = result.data.items[linknumlist[i]].displayLink;
-            } else {
+            try {
+                if (i != linknumlist[i]){
+                    search.htmlTitle = result.data.items[linknumlist[i]].htmlTitle;
+                    search.link = result.data.items[linknumlist[i]].link;
+                    search.htmlFormattedUrl = result.data.items[linknumlist[i]].htmlFormattedUrl;
+                    search.htmlSnippet = result.data.items[linknumlist[i]].htmlSnippet;
+                    search.displayLink = result.data.items[linknumlist[i]].displayLink;
+                } else {
+                    search.htmlTitle = item.htmlTitle;
+                    search.link = item.link;
+                    search.htmlFormattedUrl = item.htmlFormattedUrl;
+                    search.htmlSnippet = item.htmlSnippet;
+                    search.displayLink = item.displayLink;
+                }
+            } catch {
                 search.htmlTitle = item.htmlTitle;
                 search.link = item.link;
                 search.htmlFormattedUrl = item.htmlFormattedUrl;

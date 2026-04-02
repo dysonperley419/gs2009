@@ -2,7 +2,7 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
-export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) {
+export default async function searxngfetch(searchIP, isHTTPS, IsOtherEnginesEnabled, query, start, lr) {
     let page;
     let url;
     let url1;
@@ -24,9 +24,14 @@ export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) 
         } else {
             url1 = searchIP;
         }
+        if (url1.charAt(url1.length - 1) == "/") {
+            url1 = url1.slice(0, url1.length - 1)
+        }
     }
     if (query == undefined || query == "") {
         return
+    } else { 
+        query = encodeURIComponent(query)
     }
     if (start != undefined) {
         page = 1 + (start / 10)
@@ -34,7 +39,11 @@ export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) 
         page = 1
     }
 
-    url = url1 + "/?q=" + query + "&format=json" + "&pageno=" + page + "&engines=google"
+    url = url1 + "/search?q=" + query + "&format=json" + "&pageno=" + page
+
+    if (!IsOtherEnginesEnabled) {
+        url = url + "&engines=google"
+    }
     /*
     if (lr != undefined) {
         url = url + "&language=" + lr
@@ -42,14 +51,32 @@ export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) 
         */
 
     try {
+        console.log("[INFO] searxngfetch: URL: ", url)
         const result = await fetch(url)
-        const json = await result.json();
-        console.log(json)
         if (result.ok == false) {
-            console.log(url)
-            throw new Error("omg look at the status code you did it wrong: " + result.status)
+            const results = { data: { error: { title: "", desc: "" } }}
+            if (result.status == 429) {
+                results.data.error.title = "tu many reque >:((((("
+                results.data.error.desc = "I think... you send it too much. Try later again, or change your SearXNG instance."
+                return results
+            } else {
+                results.data.error.title = "something went wrong: ", result.status
+                results.data.error.desc = "Please check the status below: <code>", result, "</code>"
+                return results
+            }
         } else {
-            console.log(result.status)
+            console.log("searxngfetch: got an status: ", result.status)
+        }
+
+        let json;
+
+        try {
+            json = await result.json();
+        } catch(e) {
+            const results = { data: { error: { title: "", desc: "" } }}
+            results.data.error.title = "Error while exporting result into variable"
+            results.data.error.desc = "<textarea rows=\"10\" cols=\"50\">" + e + "</textarea><br>URL is: <code>" + url + "</code><br><br><b>Tips:</b><br>     - This instance might not supporting the Google engine for scraping. Try another instance."
+            return results
         }
 
         const results = { data: { searchInformation: { formattedTotalResults: 0 }, items: [] } }
@@ -84,5 +111,9 @@ export default async function searxngfetch(searchIP, isHTTPS, query, start, lr) 
     }
     catch(e) {
         console.error(e)
+        const results = { data: { error: { title: "", desc: "" } }}
+        results.data.error.title = "Error while fetching"
+        results.data.error.desc = "<textarea rows=\"10\" cols=\"50\">" + e + "</textarea>"
+        return results
     }
 }
