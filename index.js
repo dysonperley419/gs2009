@@ -935,10 +935,18 @@ app.get('/clearcookies', (req, res) => {
 
 app.get('/search', async (req, res) => {
     console.log("[INFO] search: got an /search GET")
-    if (gs_api == "" || gs_engineID == "") {
-        console.log("[WARN] search: Google Custom Search API or Programmable Search Engine ID is not set! redirecting to /gs2009settings")
-        res.redirect("/gs2009settings")
-        return
+    if (searchengine == "cse") {
+        if (gs_api == "" || gs_engineID == "") {
+            console.log("[WARN] search: Google Custom Search API or Programmable Search Engine ID is not set! redirecting to /gs2009settings")
+            res.redirect("/gs2009settings")
+            return
+        }
+    } else if (searchengine == "searxng") {
+        if (searxng_url == "" || searxng_url == undefined) {
+            console.log("[WARN] search: SearXNG Search API selected but API URL is not set on config! redirecting to /gs2009settings")
+            res.redirect("/gs2009settings")
+            return
+        }
     }
     const startTime = Date.now();
     let nowTime = 0;
