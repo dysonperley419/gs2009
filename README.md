@@ -5,7 +5,7 @@
 </nobr>
 </h5>
 <h1 align="center">gs2009</h1>
-<h3 align="center">Google search 2009 recreation with node.js and Google Search Custom API</h3>
+<h3 align="center">Google search 2009 recreation with node.js and Custom Search JSON API / SearXNG API</h3>
 <h5 align="center">Check Protoweb for early-2000s, Gplex about after 2010+ styles...</h5>
 
 > [!IMPORTANT]
@@ -16,7 +16,7 @@
 
 ## Features
  - **2009 google**
- - **Search features!** (images/videos search are not implemented yet)
+ - **Search features (with SearXNG/Custom Search JSON API)** (images/videos search are not implemented yet)
  - **Simulated login feature**
  - I'm feeling lucky
  - **Add `before:` option automatically**
@@ -28,12 +28,24 @@
 2. **Clone the repository with `git clone https://github.com/pap-git/gs2009`**, then `npm install` (if need, `npm audit fix`)
 3. `npm start` or `node index.js`
 4. It will automatically generates config.json, and runs server at PORT 3000 by default.
-5. Go to `http://[IP]:3000/gs2009settings`, then put your **Custom Search API key** and **Programmable Search Engine ID** (CSE ID), then Save it.
+5. Go to `http://[IP]:3000/gs2009settings`. 
+
+### with SearXNG Search API
+6. Set up your SearXNG instance. **You need to make the JSON format available on `search`.**
+7. On gs2009, change your engine to SearXNG and put your instance URL in inputbox. You might also have to change your settings to use other engines than Google one.
+8. Save your settings.
+
+### with Custom Search JSON API
+> [!WARNING]
+> Since Google is moving it's API to Vertex AI Search, This method will only work with existing key which generated before Google stops key generation for API.
+6. Change your engine to Custom Search JSON API, and put your API key and Custom Search Engine ID to the inputbox.
+7. Save your settings.
+
 ### Running the server
 `npm start` or `node index.js`
 ### Updating the server
 1. Stop the server if any gs2009 instance running in machine
-2. `npm update` or `node updater.js`
+2. `npm update` or `node updater.js` (actually, pulling from git works)
 
 **Before version `1.1.20251124` (Updating to latest)**
 1. Copy `config.json` to somewhere
@@ -46,8 +58,11 @@
  - **Port**
     - It is hidden in settings page, but you can configure it on config.json.
 
-### Custom Search API key / Programmable Search Engine ID (CSE ID)
-**You need this to show search results on this frontend!**
+### Engines
+**You need either to show search results on this frontend!**
+ - SearXNG instance URL which able to get results with JSON
+ - Custom Search JSON API key & Custom Search Engine ID
+
 Otherwise, You will be redirected to settings page when you tried to search.
 
 ### Language
